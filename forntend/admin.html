@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Dashboard - Apex Arena</title>
+    <link rel="stylesheet" href="../forntend/css/admin.css">
+</head>
+<body>
+
+<div class="bg"></div>
+
+<!-- Login Page -->
+<div class="login-container" id="loginPage">
+    <h1>Admin Login</h1>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard" style="display:none;">
+    <h1>Admin Dashboard</h1>
+
+    <div class="stats">
+        <div class="card">
+            <h2 id="total">0</h2>
+            <p>Total Registrations</p>
+        </div>
+        <div class="card">
+            <h2 id="paid">0</h2>
+            <p>Paid Teams</p>
+        </div>
+        <div class="card">
+            <h2 id="verified">0</h2>
+            <p>Verified Teams</p>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button onclick="openVerification()">Payment Verification</button>
+        <button onclick="exportBGMI()">Export BGMI Excel</button>
+        <button onclick="exportFF()">Export Free Fire Excel</button>
+        <button onclick="viewRegistrations()">View Registrations</button>
+    </div>
+</div>
+
+<!-- Verification Page -->
+<div class="verification" id="verificationPage" style="display:none;">
+    <h1>Payment Verification</h1>
+    <input type="text" id="phoneSearch" placeholder="Enter Phone Number">
+    <button onclick="verifyPayment()">Verify</button>
+    <button onclick="goBack()">Back</button>
+</div>
+
+<script src="../forntend/js/admin.js"></script>
+</body>
+</html>

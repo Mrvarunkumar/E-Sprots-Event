@@ -1,0 +1,61 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    background: black;
+    color: white;
+    text-align: center;
+}
+
+/* Fire Glow Background */
+.bg {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,120,0,0.25), black);
+    animation: glow 4s infinite alternate;
+    z-index: -1;
+}
+
+@keyframes glow {
+    from { opacity: 0.3; }
+    to { opacity: 0.9; }
+}
+
+.success-box {
+    margin-top: 120px;
+}
+
+.tick {
+    font-size: 80px;
+    color: orange;
+    animation: pop 0.5s ease;
+}
+
+@keyframes pop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}
+
+.team-id-box {
+    margin: 20px auto;
+    padding: 20px;
+    width: 300px;
+    border: 1px solid orange;
+    border-radius: 15px;
+    box-shadow: 0 0 20px orange;
+}
+
+button {
+    margin: 15px;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    background: orange;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    box-shadow: 0 0 20px orange;
+}

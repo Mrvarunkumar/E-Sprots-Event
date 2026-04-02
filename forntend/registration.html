@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Team Registration</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ===== RESET & BODY ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
+            background: radial-gradient(circle at center, #1a0000, #000000);
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 16px;
+        }
+
+        /* ===== CANVAS HACKER LINES (background) ===== */
+        #hackerCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.55;
+        }
+
+        /* ===== SCANNING OVERLAY ===== */
+        .scan-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom,
+                    rgba(255, 60, 0, 0.04) 0px,
+                    rgba(255, 60, 0, 0.04) 1px,
+                    transparent 2px,
+                    transparent 5px);
+            animation: scanMove 8s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes scanMove {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(120px);
+            }
+        }
+
+        /* ===== FORM CONTAINER ===== */
+        .form-page {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 960px;
+            padding: 32px 28px 28px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 60, 0, 0.25);
+            box-shadow: 0 0 40px rgba(255, 60, 0, 0.55);
+            animation: formGlow 2.4s infinite alternate;
+        }
+
+        @keyframes formGlow {
+            from {
+                box-shadow: 0 0 25px rgba(255, 60, 0, 0.4);
+            }
+
+            to {
+                box-shadow: 0 0 60px rgba(255, 60, 0, 0.85);
+            }
+        }
+
+        /* ===== TITLE ===== */
+        .form-page h1 {
+            text-align: center;
+            color: #ff3c00;
+            letter-spacing: 6px;
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            text-shadow: 0 0 24px #ff3c00, 0 0 50px #ff3c0066;
+            margin-bottom: 22px;
+        }
+
+        /* ===== TOP SECTION (Game | Email | Dept | Sem) ===== */
+        .form-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .form-section {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .form-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== INPUTS & SELECTS ===== */
+        .form-page input,
+        .form-page select {
+            width: 100%;
+            padding: 11px 13px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 60, 0, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            transition: border 0.3s, box-shadow 0.3s, transform 0.2s;
+            outline: none;
+        }
+
+        .form-page input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .form-page input:focus,
+        .form-page select:focus {
+            border: 1px solid #ff3c00;
+            box-shadow: 0 0 14px #ff3c00aa;
+            transform: scale(1.03);
+        }
+
+        .form-page select option {
+            background: #0d0000;
+            color: white;
+        }
+
+        /* ===== PLAYERS HEADING ===== */
+        .players-heading {
+            text-align: center;
+            color: orange;
+            letter-spacing: 5px;
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            margin-bottom: 18px;
+            text-shadow: 0 0 10px orange;
+        }
+
+        /* ===== PLAYERS GRID ===== */
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .players-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== PLAYER CARD ===== */
+        .player-box {
+            padding: 16px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 60, 0, 0.35);
+            background: rgba(0, 0, 0, 0.65);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Sliding top border glow */
+        .player-box::before {
+            content: "";
+            position: absolute;
+            width: 60%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #ff3c00, transparent);
+            top: 0;
+            left: -60%;
+            animation: borderSlide 2.8s linear infinite;
+        }
+
+        @keyframes borderSlide {
+            0% {
+                left: -60%;
+            }
+
+            100% {
+                left: 160%;
+            }
+        }
+
+        .player-box:hover {
+            box-shadow: 0 0 22px #ff3c00cc;
+            transform: translateY(-5px);
+        }
+
+        .player-box h3 {
+            text-align: center;
+            color: #ff3c00;
+            letter-spacing: 2px;
+            font-size: 0.85rem;
+            text-shadow: 0 0 10px #ff3c00;
+            margin-bottom: 4px;
+        }
+
+        /* ===== REGISTER BUTTON ===== */
+        .register-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(45deg, #ff3c00, #8b0000);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: box-shadow 0.3s, transform 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .register-btn::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            left: -100%;
+            top: 0;
+            transition: left 0.5s;
+        }
+
+        .register-btn:hover::before {
+            left: 100%;
+        }
+
+        .register-btn:hover {
+            box-shadow: 0 0 30px #ff3c00cc;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<script>
+function registerTeam(redirectPage) {
+    // Get all input values
+    const inputs = document.querySelectorAll('input');
+    const selects = document.querySelectorAll('select');
+
+    let teamData = {
+        game: selects[0].value,
+        email: inputs[0].value,
+        branch: selects[1].value,
+        semester: inputs[1].value,
+        captain: inputs[2].value,
+        captainPhone: inputs[3].value,
+        captainUSN: inputs[4].value,
+        player2: inputs[5].value,
+        phone2: inputs[6].value,
+        usn2: inputs[7].value,
+        player3: inputs[8].value,
+        phone3: inputs[9].value,
+        usn3: inputs[10].value,
+        player4: inputs[11].value,
+        phone4: inputs[12].value,
+        usn4: inputs[13].value
+    };
+
+    // Basic validation
+    if (!teamData.captain || !teamData.captainPhone) {
+        alert("Please fill Captain details");
+        return;
+    }
+
+    // Save to localStorage
+    let teams = JSON.parse(localStorage.getItem("teams")) || [];
+    teams.push(teamData);
+    localStorage.setItem("teams", JSON.stringify(teams));
+
+    // Button animation
+    const btn = document.querySelector('.register-btn');
+    btn.innerText = "REGISTERED ✓";
+    btn.style.background = "green";
+
+    // Redirect after 1.5 sec
+    setTimeout(() => {
+        window.location.href = redirectPage;
+    }, 1500);
+}
+</script>
+<body>
+
+    <!-- Hacker rain canvas -->
+    <canvas id="hackerCanvas"></canvas>
+    <!-- Scanline overlay -->
+    <div class="scan-overlay"></div>
+
+    <div class="form-page">
+        <h1>⚡ Registration</h1>
+
+        <!-- Top info row -->
+        <div class="form-section">
+            <select>
+                <option>BGMI</option>
+                <option>Valorant</option>
+                <option>Free Fire</option>
+                <option>CS2</option>
+            </select>
+            <input type="email" placeholder="Email" />
+            <select>
+                <option>CSE</option>
+                <option>ECE</option>
+                <option>MECH</option>
+                <option>CIVIL</option>
+                <option>EEE</option>
+            </select>
+            <input type="text" placeholder="Semester" />
+        </div>
+
+        <!-- Players heading -->
+        <div class="players-heading">P L A Y E R S</div>
+
+        <!-- Player cards -->
+        <div class="players-grid">
+            <div class="player-box">
+                <h3>CAPTAIN</h3>
+                <input type="text" placeholder="Captain Name" />
+                <input type="tel" placeholder="Phone" />
+                <input type="text" placeholder="USN" />
+            </div>
+            <div class="player-box">
+                <h3>PLAYER 2</h3>
+                <input type="text" placeholder="Player 2 Name" />
+                <input type="tel" placeholder="Phone" />
+                <input type="text" placeholder="USN" />
+            </div>
+            <div class="player-box">
+                <h3>PLAYER 3</h3>
+                <input type="text" placeholder="Player 3 Name" />
+                <input type="tel" placeholder="Phone" />
+                <input type="text" placeholder="USN" />
+            </div>
+            <div class="player-box">
+                <h3>PLAYER 4</h3>
+                <input type="text" placeholder="Player 4 Name" />
+                <input type="tel" placeholder="Phone" />
+                <input type="text" placeholder="USN" />
+            </div>
+        </div>
+        <button class="register-btn" onclick="registerTeam('success.html')">REGISTER TEAM</button>
+
+
+        <script>
+            /* ===== HACKER RAIN ANIMATION ===== */
+            const canvas = document.getElementById('hackerCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', () => { resize(); initColumns(); });
+
+            const CHARS = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモラリルレロワヲン░▒▓█▄▀■□▪▫';
+            const FONT_SIZE = 14;
+            let columns = [];
+
+            function initColumns() {
+                const cols = Math.floor(canvas.width / FONT_SIZE);
+                columns = Array.from({ length: cols }, () => ({
+                    y: Math.random() * -canvas.height,          // start above screen
+                    speed: 0.6 + Math.random() * 1.6,
+                    opacity: 0.4 + Math.random() * 0.6,
+                    length: 8 + Math.floor(Math.random() * 20), // trail length
+                    chars: []
+                }));
+                // pre-fill random chars for each column
+                columns.forEach(col => {
+                    col.chars = Array.from({ length: col.length }, () =>
+                        CHARS[Math.floor(Math.random() * CHARS.length)]
+                    );
+                });
+            }
+            initColumns();
+
+            function drawRain() {
+                // Fade trail
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.font = `${FONT_SIZE}px monospace`;
+
+                columns.forEach((col, i) => {
+                    const x = i * FONT_SIZE;
+
+                    col.chars.forEach((ch, j) => {
+                        const yPos = col.y - j * FONT_SIZE;
+                        if (yPos < 0 || yPos > canvas.height) return;
+
+                        // Head char = bright white/orange, tail fades red
+                        if (j === 0) {
+                            ctx.fillStyle = `rgba(255, 255, 255, ${col.opacity})`;
+                        } else {
+                            const fade = 1 - j / col.length;
+                            ctx.fillStyle = `rgba(255, ${Math.floor(60 * fade)}, 0, ${col.opacity * fade})`;
+                        }
+                        ctx.fillText(ch, x, yPos);
+
+                        // Randomly mutate char
+                        if (Math.random() < 0.04) {
+                            col.chars[j] = CHARS[Math.floor(Math.random() * CHARS.length)];
+                        }
+                    });
+
+                    // Move column down
+                    col.y += col.speed;
+
+                    // Reset when tail goes off screen
+                    if (col.y - col.length * FONT_SIZE > canvas.height) {
+                        col.y = -FONT_SIZE;
+                        col.speed = 0.6 + Math.random() * 1.6;
+                        col.opacity = 0.4 + Math.random() * 0.6;
+                        col.length = 8 + Math.floor(Math.random() * 20);
+                    }
+                });
+            }
+
+            setInterval(drawRain, 40); // ~25fps for perf
+            
+        </script>
+</body>
+
+</html>

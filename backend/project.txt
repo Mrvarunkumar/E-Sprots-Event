@@ -1,0 +1,21 @@
+project/
+│
+├── frontend/
+│   ├── index.html
+│   ├── bgmi.html
+│   ├── freefire.html
+│   ├── admin.html
+│   ├── success.html
+│   ├── css/
+│   ├── js/
+│
+├── backend/
+│   ├── main.py
+│   ├── razorpay.py
+│   ├── email.py
+│   ├── pdf.py
+│   ├── export.py
+│   ├── database.py
+│
+├── acknowledgements/
+├── exports/
