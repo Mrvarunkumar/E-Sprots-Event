@@ -128,13 +128,16 @@ CREATE POLICY "Service role full access verify_auth"
     USING (true)
     WITH CHECK (true);
 
--- ─── INSERT DEFAULT CREDENTIALS ───────────────────────────────────────────────
--- Ensure the admin exists with normal password matching the backend configuration
-DELETE FROM admins;
-INSERT INTO admins (username, password_hash)
-VALUES ('admin', 'adminpassword');
+-- ─── INSERT DEFAULT CREDENTIALS ──────────────────────────────────────────────
+-- Run these INSERTs in Supabase SQL Editor to seed the credentials.
+-- The password_hash column stores the plain-text password (no hashing used).
 
--- Default credentials for the separate verify.html page
-DELETE FROM verify_auth;
+-- Admin dashboard credentials (admin.html)
+INSERT INTO admins (username, password_hash)
+VALUES ('Esports', 'AI&DS')
+ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+
+-- Verification page credentials (verify.html)
 INSERT INTO verify_auth (username, password_hash)
-VALUES ('Esports', 'AI&DS');
+VALUES ('Esports', 'AI&DS')
+ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;

@@ -13,20 +13,19 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 )
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from database import admin_db
 
 router = APIRouter(tags=["PDF"])
 
-# ─── COLOR PALETTE ────────────────────────────────────────────────────────────
-DARK_BG      = colors.HexColor("#0D0D0D")
-ACCENT_RED   = colors.HexColor("#FF3C00")
-ACCENT_GOLD  = colors.HexColor("#FFD700")
-CARD_BG      = colors.HexColor("#1A1A1A")
-WHITE        = colors.white
-LIGHT_GREY   = colors.HexColor("#AAAAAA")
-VERIFIED_GRN = colors.HexColor("#00FF88")
-PENDING_ORG  = colors.HexColor("#FFA500")
+# ─── COLOR PALETTE (FORMAL) ───────────────────────────────────────────────────
+DOC_BG       = colors.white
+TEXT_MAIN    = colors.black
+TEXT_MUTED   = colors.HexColor("#555555")
+BORDER_COLOR = colors.HexColor("#000000")
+CARD_BG_1    = colors.white
+CARD_BG_2    = colors.HexColor("#F5F5F5")
+HEADER_BG    = colors.HexColor("#EFEFEF")
 
 
 def _build_pdf(team: dict) -> bytes:
@@ -46,81 +45,78 @@ def _build_pdf(team: dict) -> bytes:
     # ── Styles ────────────────────────────────────────────────────────────────
     title_style = ParagraphStyle(
         "title", parent=styles["Title"],
-        fontName="Helvetica-Bold", fontSize=22, textColor=ACCENT_RED,
-        alignment=TA_CENTER, spaceAfter=4,
-    )
-    sub_style = ParagraphStyle(
-        "sub", parent=styles["Normal"],
-        fontName="Helvetica", fontSize=10, textColor=LIGHT_GREY,
-        alignment=TA_CENTER, spaceAfter=2,
+        fontName="Helvetica-Bold", fontSize=16, textColor=TEXT_MAIN,
+        alignment=TA_CENTER, spaceAfter=14, spaceBefore=10,
     )
     heading_style = ParagraphStyle(
         "heading", parent=styles["Normal"],
-        fontName="Helvetica-Bold", fontSize=13, textColor=ACCENT_GOLD,
+        fontName="Helvetica-Bold", fontSize=11, textColor=TEXT_MAIN,
         alignment=TA_LEFT, spaceBefore=8, spaceAfter=4,
     )
     body_style = ParagraphStyle(
         "body", parent=styles["Normal"],
-        fontName="Helvetica", fontSize=10, textColor=WHITE,
-        alignment=TA_LEFT,
+        fontName="Helvetica", fontSize=10, textColor=TEXT_MAIN,
+        alignment=TA_LEFT, leading=14,
     )
-    team_id_style = ParagraphStyle(
-        "teamid", parent=styles["Normal"],
-        fontName="Helvetica-Bold", fontSize=18, textColor=ACCENT_GOLD,
-        alignment=TA_CENTER, spaceBefore=6, spaceAfter=6,
+    right_align_style = ParagraphStyle(
+        "right_align", parent=body_style, alignment=TA_RIGHT,
     )
     footer_style = ParagraphStyle(
         "footer", parent=styles["Normal"],
-        fontName="Helvetica-Oblique", fontSize=8, textColor=LIGHT_GREY,
+        fontName="Helvetica", fontSize=9, textColor=TEXT_MUTED,
         alignment=TA_CENTER,
     )
 
-    # ── Header ────────────────────────────────────────────────────────────────
-    story.append(Paragraph("⚡ APEX ARENA", title_style))
-    story.append(Paragraph("VTU Kalburagi — E-Sports Event", sub_style))
-    story.append(Paragraph("Team Registration Confirmation", sub_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=ACCENT_RED, spaceAfter=8))
+    # ── Official Header ───────────────────────────────────────────────────────
+    raw_date = team.get("created_at")
+    if not raw_date:
+        raw_date = datetime.now(timezone.utc).isoformat()
+    reg_date = datetime.fromisoformat(raw_date.replace("Z", "+00:00")).strftime("%d %b %Y")
+    header_data = [
+        [
+            Paragraph("<b>APEX ARENA E-SPORTS</b><br/>VTU Kalburagi Events Committee<br/>Kalburagi, Karnataka", body_style),
+            Paragraph(f"<b>Date of Issue:</b> {datetime.now().strftime('%d %b %Y')}<br/><b>Registration Date:</b> {reg_date}<br/><b>Reference No:</b> {team['team_id']}", right_align_style)
+        ]
+    ]
+    header_table = Table(header_data, colWidths=["50%", "50%"])
+    story.append(header_table)
+    story.append(HRFlowable(width="100%", thickness=1.5, color=BORDER_COLOR, spaceBefore=12, spaceAfter=8))
 
-    # ── Team ID badge ─────────────────────────────────────────────────────────
-    story.append(Paragraph(f"TEAM ID: {team['team_id']}", team_id_style))
+    # ── Title ─────────────────────────────────────────────────────────────────
+    story.append(Paragraph("OFFICIAL REGISTRATION ACKNOWLEDGEMENT", title_style))
+
+    # ── Intro Paragraph ───────────────────────────────────────────────────────
+    intro_text = f"This document serves as the official confirmation of registration for the Apex Arena E-Sports Tournament. The team has successfully registered under the identifier <b>{team['team_id']}</b>."
+    story.append(Paragraph(intro_text, body_style))
+    story.append(Spacer(1, 12))
 
     # ── Status banner ─────────────────────────────────────────────────────────
-    status        = team.get("payment_status", "pending").upper()
-    status_color  = VERIFIED_GRN if status == "VERIFIED" else PENDING_ORG
-    status_label  = f"Payment Status: {status}"
-    status_data   = [[status_label]]
-    status_table  = Table(status_data, colWidths=["100%"])
+    status = team.get("payment_status", "pending").upper()
+    status_data = [[f"PAYMENT STATUS: {status}"]]
+    status_table = Table(status_data, colWidths=["100%"])
     status_table.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (-1, -1), CARD_BG),
-        ("TEXTCOLOR",   (0, 0), (-1, -1), status_color),
-        ("FONTNAME",    (0, 0), (-1, -1), "Helvetica-Bold"),
-        ("FONTSIZE",    (0, 0), (-1, -1), 11),
-        ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING",  (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("ROUNDEDCORNERS", [4]),
+        ("BACKGROUND",    (0, 0), (-1, -1), HEADER_BG),
+        ("TEXTCOLOR",     (0, 0), (-1, -1), TEXT_MAIN),
+        ("FONTNAME",      (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0, 0), (-1, -1), 10),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("GRID",          (0, 0), (-1, -1), 1, BORDER_COLOR),
     ]))
     story.append(status_table)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 14))
 
     # ── Team Info ─────────────────────────────────────────────────────────────
-    story.append(Paragraph("TEAM INFORMATION", heading_style))
+    story.append(Paragraph("TEAM PARTICULARS", heading_style))
     info_data = [
-        ["Game",     team.get("game", "—"),    "Branch",   team.get("branch", "—")],
-        ["Email",    team.get("email", "—"),   "Semester", team.get("semester", "—")],
-        ["Registered",
-         datetime.fromisoformat(
-             team.get("created_at", datetime.now(timezone.utc).isoformat())
-             .replace("Z", "+00:00")
-         ).strftime("%d %b %Y %I:%M %p"), "", ""],
+        ["Event Category", team.get("game", "—"), "College Branch", team.get("branch", "—")],
+        ["Contact Email", team.get("email", "—"), "Semester", team.get("semester", "—")],
     ]
     info_table = Table(info_data, colWidths=[35 * mm, 60 * mm, 35 * mm, 40 * mm])
     info_table.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), CARD_BG),
-        ("TEXTCOLOR",     (0, 0), (0, -1), ACCENT_RED),
-        ("TEXTCOLOR",     (2, 0), (2, -1), ACCENT_RED),
-        ("TEXTCOLOR",     (1, 0), (1, -1), WHITE),
-        ("TEXTCOLOR",     (3, 0), (3, -1), WHITE),
+        ("BACKGROUND",    (0, 0), (-1, -1), CARD_BG_1),
+        ("TEXTCOLOR",     (0, 0), (-1, -1), TEXT_MAIN),
         ("FONTNAME",      (0, 0), (0, -1), "Helvetica-Bold"),
         ("FONTNAME",      (2, 0), (2, -1), "Helvetica-Bold"),
         ("FONTNAME",      (1, 0), (1, -1), "Helvetica"),
@@ -130,23 +126,22 @@ def _build_pdf(team: dict) -> bytes:
         ("TOPPADDING",    (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-        ("GRID",          (0, 0), (-1, -1), 0.5, ACCENT_RED),
-        ("SPAN",          (1, 2), (3, 2)),
+        ("GRID",          (0, 0), (-1, -1), 1, BORDER_COLOR),
     ]))
     story.append(info_table)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 14))
 
     # ── Players ───────────────────────────────────────────────────────────────
-    story.append(Paragraph("SQUAD ROSTER", heading_style))
+    story.append(Paragraph("REGISTERED SQUAD MEMBERS", heading_style))
 
     players = [
-        ("CAPTAIN ★", "captain_name", "captain_phone", "captain_usn"),
-        ("PLAYER 2",  "player2_name", "player2_phone", "player2_usn"),
-        ("PLAYER 3",  "player3_name", "player3_phone", "player3_usn"),
-        ("PLAYER 4",  "player4_name", "player4_phone", "player4_usn"),
+        ("Captain", "captain_name", "captain_phone", "captain_usn"),
+        ("Player 2",  "player2_name", "player2_phone", "player2_usn"),
+        ("Player 3",  "player3_name", "player3_phone", "player3_usn"),
+        ("Player 4",  "player4_name", "player4_phone", "player4_usn"),
     ]
 
-    player_header = ["Role", "Name", "Phone", "USN"]
+    player_header = ["Designation", "Full Name", "Contact", "USN"]
     player_data   = [player_header]
     for label, name_key, phone_key, usn_key in players:
         n = team.get(name_key) or "—"
@@ -159,43 +154,45 @@ def _build_pdf(team: dict) -> bytes:
         colWidths=[30 * mm, 55 * mm, 40 * mm, 45 * mm],
     )
     player_table.setStyle(TableStyle([
-        # Header row
-        ("BACKGROUND",    (0, 0), (-1, 0), ACCENT_RED),
-        ("TEXTCOLOR",     (0, 0), (-1, 0), WHITE),
+        ("BACKGROUND",    (0, 0), (-1, 0), HEADER_BG),
+        ("TEXTCOLOR",     (0, 0), (-1, 0), TEXT_MAIN),
         ("FONTNAME",      (0, 0), (-1, 0), "Helvetica-Bold"),
         ("ALIGN",         (0, 0), (-1, 0), "CENTER"),
-        # Data rows alternating
-        ("BACKGROUND",    (0, 1), (-1, 1), CARD_BG),
-        ("BACKGROUND",    (0, 2), (-1, 2), colors.HexColor("#222222")),
-        ("BACKGROUND",    (0, 3), (-1, 3), CARD_BG),
-        ("BACKGROUND",    (0, 4), (-1, 4), colors.HexColor("#222222")),
-        ("TEXTCOLOR",     (0, 1), (0, -1), ACCENT_GOLD),
-        ("TEXTCOLOR",     (1, 1), (-1, -1), WHITE),
+        ("BACKGROUND",    (0, 1), (-1, -1), CARD_BG_1),
+        ("TEXTCOLOR",     (0, 1), (-1, -1), TEXT_MAIN),
         ("FONTNAME",      (0, 1), (0, -1), "Helvetica-Bold"),
         ("FONTNAME",      (1, 1), (-1, -1), "Helvetica"),
-        ("FONTSIZE",      (0, 0), (-1, -1), 10),
+        ("FONTSIZE",      (0, 0), (-1, -1), 9.5),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-        ("GRID",          (0, 0), (-1, -1), 0.5, ACCENT_RED),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("GRID",          (0, 0), (-1, -1), 1, BORDER_COLOR),
     ]))
     story.append(player_table)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 40))
+
+    # ── Signatory ─────────────────────────────────────────────────────────────
+    sig_data = [
+        [
+            Paragraph("<b>Participant Signature</b><br/><br/><br/>_______________________", body_style),
+            Paragraph("<b>Authorized Signatory</b><br/><br/><br/>_______________________<br/>Apex Arena Committee", right_align_style)
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=["50%", "50%"])
+    story.append(sig_table)
+    story.append(Spacer(1, 30))
 
     # ── Important note ────────────────────────────────────────────────────────
-    story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT_RED, spaceAfter=6))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceAfter=8))
     story.append(Paragraph(
-        "⚠ Please carry this confirmation on the day of the event along with a valid college ID card.",
-        ParagraphStyle("note", parent=body_style, textColor=ACCENT_GOLD, fontSize=9),
+        "<b>Note:</b> This is a digitally generated document. Please retain a printed copy of this acknowledgement and present it alongside a valid institutional ID card at the venue.",
+        ParagraphStyle("note", parent=body_style, textColor=TEXT_MAIN, fontSize=8.5, leading=12),
     ))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 15))
 
     # ── Footer ────────────────────────────────────────────────────────────────
-    story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT_GREY))
-    story.append(Spacer(1, 4))
     story.append(Paragraph(
-        f"Generated on {datetime.now().strftime('%d %b %Y %I:%M %p')} | "
-        "Apex Arena — VTU Kalburagi E-Sports Event",
+        f"Document generated on {datetime.now().strftime('%d %b %Y %H:%M')} — apex-arena.events",
         footer_style,
     ))
 

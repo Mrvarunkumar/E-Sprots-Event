@@ -18,11 +18,14 @@ class Settings(BaseSettings):
 
     # App
     app_env: str = "development"
-    allowed_origins: str = "http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000"
+    allowed_origins: str = "http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000,http://localhost:8000,null"
 
     @property
     def cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.allowed_origins.split(",")]
+        # Filter blank entries and return unique origins
+        return list(dict.fromkeys(
+            o.strip() for o in self.allowed_origins.split(",") if o.strip()
+        ))
 
     class Config:
         env_file = ".env"
