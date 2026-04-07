@@ -275,53 +275,7 @@
         }
     </style>
 </head>
-<script>
-function registerTeam(redirectPage) {
-    // Get all input values
-    const inputs = document.querySelectorAll('input');
-    const selects = document.querySelectorAll('select');
 
-    let teamData = {
-        game: selects[0].value,
-        email: inputs[0].value,
-        branch: selects[1].value,
-        semester: inputs[1].value,
-        captain: inputs[2].value,
-        captainPhone: inputs[3].value,
-        captainUSN: inputs[4].value,
-        player2: inputs[5].value,
-        phone2: inputs[6].value,
-        usn2: inputs[7].value,
-        player3: inputs[8].value,
-        phone3: inputs[9].value,
-        usn3: inputs[10].value,
-        player4: inputs[11].value,
-        phone4: inputs[12].value,
-        usn4: inputs[13].value
-    };
-
-    // Basic validation
-    if (!teamData.captain || !teamData.captainPhone) {
-        alert("Please fill Captain details");
-        return;
-    }
-
-    // Save to localStorage
-    let teams = JSON.parse(localStorage.getItem("teams")) || [];
-    teams.push(teamData);
-    localStorage.setItem("teams", JSON.stringify(teams));
-
-    // Button animation
-    const btn = document.querySelector('.register-btn');
-    btn.innerText = "REGISTERED ✓";
-    btn.style.background = "green";
-
-    // Redirect after 1.5 sec
-    setTimeout(() => {
-        window.location.href = redirectPage;
-    }, 1500);
-}
-</script>
 <body>
 
     <!-- Hacker rain canvas -->
@@ -334,21 +288,19 @@ function registerTeam(redirectPage) {
 
         <!-- Top info row -->
         <div class="form-section">
-            <select>
-                <option>BGMI</option>
-                <option>Valorant</option>
-                <option>Free Fire</option>
-                <option>CS2</option>
+            <select id="sel-game">
+                <option value="BGMI">BGMI</option>
+                <option value="Free Fire">Free Fire</option>
+                <option value="Hackathon">Hackathon</option>
+                <option value="Quiz">Quiz</option>
             </select>
-            <input type="email" placeholder="Email" />
-            <select>
-                <option>CSE</option>
-                <option>ECE</option>
-                <option>MECH</option>
-                <option>CIVIL</option>
-                <option>EEE</option>
+            <input type="email" id="inp-email" placeholder="Email" />
+            <select id="sel-branch">
+                <option value="CSE">CSE</option>
+                <option value="AI&DS">AI&amp;DS</option>
+                <option value="ECE">ECE</option>
             </select>
-            <input type="text" placeholder="Semester" />
+            <input type="text" id="inp-semester" placeholder="Semester (1-8)" maxlength="1" />
         </div>
 
         <!-- Players heading -->
@@ -358,30 +310,33 @@ function registerTeam(redirectPage) {
         <div class="players-grid">
             <div class="player-box">
                 <h3>CAPTAIN</h3>
-                <input type="text" placeholder="Captain Name" />
-                <input type="tel" placeholder="Phone" />
-                <input type="text" placeholder="USN" />
+                <input type="text" id="inp-captain-name" placeholder="Captain Name" />
+                <input type="tel" id="inp-captain-phone" placeholder="Phone" maxlength="10" />
+                <input type="text" id="inp-captain-usn" placeholder="USN (e.g. 4VV22CS001)" />
             </div>
             <div class="player-box">
                 <h3>PLAYER 2</h3>
-                <input type="text" placeholder="Player 2 Name" />
-                <input type="tel" placeholder="Phone" />
-                <input type="text" placeholder="USN" />
+                <input type="text" id="inp-p2-name" placeholder="Player 2 Name" />
+                <input type="tel" id="inp-p2-phone" placeholder="Phone" maxlength="10" />
+                <input type="text" id="inp-p2-usn" placeholder="USN" />
             </div>
             <div class="player-box">
                 <h3>PLAYER 3</h3>
-                <input type="text" placeholder="Player 3 Name" />
-                <input type="tel" placeholder="Phone" />
-                <input type="text" placeholder="USN" />
+                <input type="text" id="inp-p3-name" placeholder="Player 3 Name" />
+                <input type="tel" id="inp-p3-phone" placeholder="Phone" maxlength="10" />
+                <input type="text" id="inp-p3-usn" placeholder="USN" />
             </div>
             <div class="player-box">
                 <h3>PLAYER 4</h3>
-                <input type="text" placeholder="Player 4 Name" />
-                <input type="tel" placeholder="Phone" />
-                <input type="text" placeholder="USN" />
+                <input type="text" id="inp-p4-name" placeholder="Player 4 Name" />
+                <input type="tel" id="inp-p4-phone" placeholder="Phone" maxlength="10" />
+                <input type="text" id="inp-p4-usn" placeholder="USN" />
             </div>
         </div>
-        <button class="register-btn" onclick="registerTeam('success.html')">REGISTER TEAM</button>
+        <div id="reg-error"
+            style="display:none; margin-top:14px; padding:12px 16px; border-radius:10px; border:1px solid rgba(255,60,0,0.5); background:rgba(255,60,0,0.08); color:#ff8800; font-size:0.9rem; text-align:center;">
+        </div>
+        <button class="register-btn" id="reg-btn" onclick="registerTeam()">REGISTER TEAM</button>
 
 
         <script>
@@ -461,7 +416,99 @@ function registerTeam(redirectPage) {
             }
 
             setInterval(drawRain, 40); // ~25fps for perf
-            
+        </script>
+
+        <!-- ===== REGISTRATION API LOGIC ===== -->
+        <script>
+            const API_BASE = 'http://127.0.0.1:8000';
+
+            async function registerTeam() {
+                const game = document.getElementById('sel-game').value;
+                const email = document.getElementById('inp-email').value.trim();
+                const branch = document.getElementById('sel-branch').value;
+                const semester = document.getElementById('inp-semester').value.trim();
+                const captainName = document.getElementById('inp-captain-name').value.trim();
+                const captainPhone = document.getElementById('inp-captain-phone').value.trim();
+                const captainUSN = document.getElementById('inp-captain-usn').value.trim();
+
+                // Validation
+                const errDiv = document.getElementById('reg-error');
+                errDiv.style.display = 'none';
+
+                if (!captainName || !captainPhone || !captainUSN) {
+                    errDiv.textContent = '⚠ Please fill in all Captain details (Name, Phone, USN).';
+                    errDiv.style.display = 'block';
+                    return;
+                }
+                if (!email) {
+                    errDiv.textContent = '⚠ Please enter your email address.';
+                    errDiv.style.display = 'block';
+                    return;
+                }
+                if (!semester || isNaN(semester) || semester < 1 || semester > 8) {
+                    errDiv.textContent = '⚠ Semester must be a number between 1 and 8.';
+                    errDiv.style.display = 'block';
+                    return;
+                }
+
+                // Build payload matching the FastAPI model exactly
+                const payload = {
+                    game,
+                    email,
+                    branch,
+                    semester,
+                    captain_name: captainName,
+                    captain_phone: captainPhone,
+                    captain_usn: captainUSN,
+                    player2_name: document.getElementById('inp-p2-name').value.trim() || null,
+                    player2_phone: document.getElementById('inp-p2-phone').value.trim() || null,
+                    player2_usn: document.getElementById('inp-p2-usn').value.trim() || null,
+                    player3_name: document.getElementById('inp-p3-name').value.trim() || null,
+                    player3_phone: document.getElementById('inp-p3-phone').value.trim() || null,
+                    player3_usn: document.getElementById('inp-p3-usn').value.trim() || null,
+                    player4_name: document.getElementById('inp-p4-name').value.trim() || null,
+                    player4_phone: document.getElementById('inp-p4-phone').value.trim() || null,
+                    player4_usn: document.getElementById('inp-p4-usn').value.trim() || null,
+                };
+
+                const btn = document.getElementById('reg-btn');
+                btn.innerText = 'REGISTERING...';
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.success) {
+                        btn.innerText = 'REGISTERED ✓';
+                        btn.style.background = 'linear-gradient(45deg, #00aa44, #00ff88)';
+                        btn.style.opacity = '1';
+                        // Redirect to success page WITH the real team_id from Supabase
+                        setTimeout(() => {
+                            window.location.href = `success.html?teamId=${encodeURIComponent(data.team_id)}`;
+                        }, 1200);
+                    } else {
+                        const msg = data.detail || data.message || 'Registration failed. Please try again.';
+                        errDiv.textContent = '✕ ' + msg;
+                        errDiv.style.display = 'block';
+                        btn.innerText = 'REGISTER TEAM';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
+                } catch (err) {
+                    errDiv.textContent = '✕ Network error: Cannot connect to the server. Ensure the backend is running.';
+                    errDiv.style.display = 'block';
+                    btn.innerText = 'REGISTER TEAM';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }
         </script>
 </body>
 

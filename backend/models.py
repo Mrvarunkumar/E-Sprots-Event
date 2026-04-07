@@ -8,7 +8,7 @@ import re
 
 
 # ─── ENUMS ───────────────────────────────────────────────────────────────────
-GameType    = Literal["BGMI", "Free Fire"]
+GameType    = Literal["BGMI", "Free Fire", "Hackathon", "Quiz"]
 BranchType  = Literal["CSE", "AI&DS", "ECE"]
 PayStatus   = Literal["pending", "paid", "verified", "rejected"]
 
@@ -157,6 +157,8 @@ class VerifyPaymentResponse(BaseModel):
 class EventCountResponse(BaseModel):
     freefire_count: int
     bgmi_count:     int
+    hackathon_count: int
+    quiz_count:     int
     total:          int
 
 

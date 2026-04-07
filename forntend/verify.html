@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apex Arena — Admin</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* =========================================
+   ROOT VARIABLES
+   ========================================= */
+        :root {
+            --orange: #ff3c00;
+            --orange-g: rgba(255, 60, 0, 0.7);
+            --orange-dim: rgba(255, 60, 0, 0.12);
+            --teal: #00ffe0;
+            --teal-g: rgba(0, 255, 224, 0.55);
+            --teal-dim: rgba(0, 255, 224, 0.1);
+            --green: #00ff88;
+            --green-g: rgba(0, 255, 136, 0.6);
+            --red: #ff0044;
+            --red-g: rgba(255, 0, 68, 0.6);
+            --gold: #ffd700;
+            --bg: #000;
+            --card: rgba(5, 0, 0, 0.9);
+            --border: rgba(255, 60, 0, 0.2);
+            --border-hi: rgba(255, 60, 0, 0.7);
+            --text: #fff;
+            --text-dim: rgba(255, 255, 255, 0.5);
+            --text-dead: rgba(255, 255, 255, 0.2);
+            --font-d: 'Orbitron', monospace;
+            --font-b: 'Rajdhani', sans-serif;
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        /* =========================================
+   RESET
+   ========================================= */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--orange);
+            border-radius: 3px;
+        }
+
+        body {
+            font-family: var(--font-b);
+            background: var(--bg);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: var(--text);
+            cursor: crosshair;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        button,
+        input,
+        select {
+            cursor: crosshair;
+            font-family: var(--font-d);
+        }
+
+        /* =========================================
+   BACKGROUND LAYERS
+   ========================================= */
+        .grid-floor {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 60, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 60, 0, 0.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            transform: perspective(500px) rotateX(10deg) scaleY(1.2);
+            transform-origin: 50% 100%;
+            animation: gridPan 18s linear infinite;
+        }
+
+        @keyframes gridPan {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 0 44px;
+            }
+        }
+
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px,
+                    rgba(0, 0, 0, 0.14) 3px, rgba(0, 0, 0, 0.14) 4px);
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
+        }
+
+        /* Corner brackets */
+        .corner {
+            position: fixed;
+            z-index: 4;
+            pointer-events: none;
+            width: 54px;
+            height: 54px;
+            opacity: 0.3;
+        }
+
+        .corner::before,
+        .corner::after {
+            content: "";
+            position: absolute;
+            background: var(--orange);
+        }
+
+        .corner::before {
+            width: 100%;
+            height: 2px;
+            top: 0;
+            left: 0;
+        }
+
+        .corner::after {
+            width: 2px;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .corner.tl {
+            top: 16px;
+            left: 16px;
+        }
+
+        .corner.tr {
+            top: 16px;
+            right: 16px;
+            transform: scaleX(-1);
+        }
+
+        .corner.bl {
+            bottom: 16px;
+            left: 16px;
+            transform: scaleY(-1);
+        }
+
+        .corner.br {
+            bottom: 16px;
+            right: 16px;
+            transform: scale(-1);
+        }
+
+        /* =========================================
+   TOAST
+   ========================================= */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: var(--font-d);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            z-index: 9999;
+            transform: translateY(100px);
+            transition: transform 0.35s var(--ease);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        /* =========================================
+   SHARED PAGE CARD
+   ========================================= */
+        .page {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            backdrop-filter: blur(18px);
+            box-shadow: 0 0 60px rgba(255, 60, 0, 0.2), 0 40px 80px rgba(0, 0, 0, 0.9);
+            animation: pageRise 0.9s var(--ease) both;
+            display: none;
+            /* shown by JS */
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes pageRise {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .page::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 8%;
+            right: 8%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--orange), var(--teal), transparent);
+            animation: topBarPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes topBarPulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* =========================================
+   ── LOGIN VIEW ──
+   ========================================= */
+        #loginPage {
+            max-width: 440px;
+            padding: 40px 36px 36px;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .brand-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            background: var(--orange-dim);
+            border: 1px solid var(--border-hi);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+            animation: iconPulse 2.8s ease-in-out infinite;
+            box-shadow: 0 0 28px rgba(255, 60, 0, 0.2);
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(255, 60, 0, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(255, 60, 0, 0.5), 0 0 70px rgba(255, 60, 0, 0.12);
+            }
+        }
+
+        .brand-icon svg {
+            width: 36px;
+            height: 36px;
+            fill: none;
+            stroke: var(--orange);
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 6px var(--orange-g));
+        }
+
+        .brand h1 {
+            font-family: var(--font-d);
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            letter-spacing: 6px;
+            color: var(--orange);
+            text-shadow: 0 0 24px var(--orange-g);
+        }
+
+        .brand p {
+            font-size: 0.65rem;
+            letter-spacing: 4px;
+            color: var(--text-dim);
+            margin-top: 6px;
+        }
+
+        .brand-line {
+            height: 1px;
+            margin: 18px auto 0;
+            width: 160px;
+            background: linear-gradient(90deg, transparent, var(--orange), var(--teal), transparent);
+            opacity: 0.7;
+        }
+
+        /* Login fields */
+        .lg-field {
+            margin-bottom: 20px;
+        }
+
+        .lg-field label {
+            display: block;
+            font-size: 0.58rem;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-family: var(--font-d);
+        }
+
+        .lg-input-wrap {
+            position: relative;
+        }
+
+        .lg-input-wrap .ico {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--orange);
+            font-size: 0.75rem;
+            opacity: 0.55;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .lg-input-wrap input {
+            width: 100%;
+            padding: 13px 14px 13px 40px;
+            background: rgba(255, 60, 0, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font-family: var(--font-d);
+            font-size: 0.82rem;
+            letter-spacing: 2px;
+            outline: none;
+            transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease), background 0.3s;
+        }
+
+        .lg-input-wrap input::placeholder {
+            color: var(--text-dead);
+        }
+
+        .lg-input-wrap input:focus {
+            border-color: var(--orange);
+            background: rgba(255, 60, 0, 0.08);
+            box-shadow: 0 0 0 3px rgba(255, 60, 0, 0.1), 0 0 16px rgba(255, 60, 0, 0.1);
+        }
+
+        .lg-input-wrap input.err-inp {
+            border-color: var(--red);
+            background: rgba(255, 0, 68, 0.05);
+            box-shadow: 0 0 0 3px rgba(255, 0, 68, 0.1);
+        }
+
+        .toggle-pw {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-dead);
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+            padding: 4px 6px;
+            transition: color 0.2s;
+        }
+
+        .toggle-pw:hover {
+            color: var(--orange);
+        }
+
+        .field-err {
+            font-size: 0.58rem;
+            letter-spacing: 2px;
+            color: var(--red);
+            margin-top: 6px;
+            min-height: 14px;
+            font-family: var(--font-b);
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity 0.25s, transform 0.25s;
+        }
+
+        .field-err.vis {
+            opacity: 1;
+            transform: none;
+        }
+
+        /* Login button */
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            border: 1px solid var(--orange);
+            border-radius: 9px;
+            color: var(--orange);
+            font-family: var(--font-d);
+            font-size: 0.72rem;
+            letter-spacing: 4px;
+            font-weight: 700;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+        }
+
+        .login-btn::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: var(--orange);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.35s var(--ease);
+            z-index: 0;
+        }
+
+        .login-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-btn:hover::before {
+            transform: scaleX(1);
+        }
+
+        .login-btn:hover {
+            color: #fff;
+            box-shadow: 0 0 28px var(--orange-g);
+        }
+
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .login-btn .spinner {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .login-btn.loading .btn-lbl {
+            display: none;
+        }
+
+        .login-btn.loading .spinner {
+            display: block;
+        }
+
+        .login-btn.loading::before {
+            transform: scaleX(1);
+        }
+
+        .login-btn.loading {
+            color: #fff;
+        }
+
+        .lg-divider {
+            text-align: center;
+            margin: 24px 0 0;
+            font-size: 0.55rem;
+            letter-spacing: 3px;
+            color: var(--text-dead);
+            font-family: var(--font-d);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lg-divider::before,
+        .lg-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .sys-bar {
+            margin-top: 20px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(0, 255, 224, 0.03);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sys-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            flex-shrink: 0;
+            animation: blink 1.6s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .sys-txt {
+            font-size: 0.58rem;
+            letter-spacing: 2px;
+            color: var(--text-dead);
+            font-family: var(--font-b);
+        }
+
+        .sys-txt span {
+            color: var(--teal);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-10px);
+            }
+
+            40% {
+                transform: translateX(10px);
+            }
+
+            60% {
+                transform: translateX(-6px);
+            }
+
+            80% {
+                transform: translateX(6px);
+            }
+        }
+
+        /* =========================================
+   ── VERIFICATION VIEW ──
+   ========================================= */
+        #verifyPage {
+            max-width: 860px;
+            padding: 36px 32px 32px;
+        }
+
+        .hdr {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hdr-left h1 {
+            font-family: var(--font-d);
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            color: var(--orange);
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px var(--orange-g);
+        }
+
+        .hdr-left p {
+            font-size: 0.72rem;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+
+        .hdr-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .logout-btn {
+            padding: 9px 16px;
+            background: transparent;
+            border: 1px solid rgba(255, 0, 68, 0.4);
+            border-radius: 7px;
+            color: var(--red);
+            font-family: var(--font-d);
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            transition: all 0.3s var(--ease);
+        }
+
+        .logout-btn:hover {
+            background: var(--red);
+            color: #fff;
+            box-shadow: 0 0 16px var(--red-g);
+        }
+
+        .back-btn {
+            padding: 9px 18px;
+            background: transparent;
+            border: 1px solid var(--border-hi);
+            border-radius: 7px;
+            color: var(--orange);
+            font-family: var(--font-d);
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            transition: all 0.3s var(--ease);
+        }
+
+        .back-btn:hover {
+            background: var(--orange);
+            color: #fff;
+            box-shadow: 0 0 16px var(--orange-g);
+        }
+
+        /* operator pill */
+        .op-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: var(--orange-dim);
+            border: 1px solid var(--border);
+            font-size: 0.58rem;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            font-family: var(--font-d);
+        }
+
+        .op-pill span {
+            color: var(--orange);
+        }
+
+        .search-panel {
+            display: flex;
+            gap: 14px;
+            align-items: flex-end;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.6rem;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-family: var(--font-d);
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background: rgba(255, 60, 0, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font-family: var(--font-d);
+            font-size: 0.82rem;
+            letter-spacing: 2px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(255, 60, 0, 0.1);
+        }
+
+        .input-wrap::before {
+            content: "▶";
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--orange);
+            font-size: 0.65rem;
+            opacity: 0.5;
+        }
+
+        .scan-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--orange);
+            border-radius: 9px;
+            color: var(--orange);
+            font-family: var(--font-d);
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            transition: all 0.3s var(--ease);
+        }
+
+        .scan-btn:hover {
+            background: var(--orange);
+            color: #fff;
+            box-shadow: 0 0 20px var(--orange-g);
+        }
+
+        .scanner {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255, 60, 0, 0.04);
+            text-align: center;
+        }
+
+        .scan-bar-wrap {
+            height: 4px;
+            background: rgba(255, 60, 0, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .scan-bar {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--orange), var(--teal));
+            transition: width 0.05s linear;
+            box-shadow: 0 0 8px var(--orange);
+        }
+
+        #resultArea {
+            display: none;
+        }
+
+        .result-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .rc-banner {
+            padding: 16px 22px;
+            background: rgba(255, 60, 0, 0.05);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .rc-banner-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .team-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: rgba(255, 60, 0, 0.15);
+            border: 1px solid var(--border-hi);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-d);
+            font-size: 1rem;
+            color: var(--orange);
+        }
+
+        .status-badge {
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-family: var(--font-d);
+            font-size: 0.62rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        .badge-paid {
+            background: rgba(0, 255, 136, 0.12);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .badge-unpaid {
+            background: rgba(255, 60, 0, 0.1);
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+
+        .badge-verified {
+            background: rgba(0, 255, 224, 0.1);
+            color: var(--teal);
+            border: 1px solid var(--teal);
+        }
+
+        .rc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .rc-cell {
+            padding: 16px 22px;
+            background: #000;
+        }
+
+        .rc-cell .lbl {
+            font-size: 0.58rem;
+            letter-spacing: 3px;
+            color: var(--text-dead);
+            margin-bottom: 5px;
+        }
+
+        .rc-cell .val {
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        .val.accent {
+            color: var(--orange);
+        }
+
+        .val.green {
+            color: var(--green);
+        }
+
+        .rc-players {
+            padding: 20px 22px;
+        }
+
+        .players-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .player-chip {
+            padding: 10px 14px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: rgba(255, 60, 0, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: var(--orange-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            color: var(--orange);
+        }
+
+        .rc-actions {
+            padding: 16px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .act-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 9px;
+            font-family: var(--font-d);
+            font-size: 0.62rem;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+
+        .btn-verify {
+            background: transparent;
+            border: 1px solid var(--teal);
+            color: var(--teal);
+        }
+
+        .btn-verify:hover {
+            background: var(--teal);
+            color: #000;
+        }
+
+        .btn-reject {
+            background: transparent;
+            border: 1px solid var(--red);
+            color: var(--red);
+        }
+
+        .btn-reject:hover {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .not-found {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: var(--red);
+            font-family: var(--font-d);
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- BG -->
+    <div class="grid-floor"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ═══════════════════════════════════════
+     LOGIN PAGE
+     ═══════════════════════════════════════ -->
+    <div class="page active" id="loginPage">
+
+        <div class="brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="12 2 19 5 19 12 12 22 5 12 5 5" />
+                    <line x1="12" y1="8" x2="12" y2="13" />
+                    <circle cx="12" cy="16" r="1" fill="var(--orange)" stroke="none" />
+                </svg>
+            </div>
+            <h1>APEX ARENA</h1>
+            <p>ADMIN CONTROL SYSTEM</p>
+            <div class="brand-line"></div>
+        </div>
+
+        <!-- Username -->
+        <div class="lg-field">
+            <label for="usernameInput">OPERATOR ID</label>
+            <div class="lg-input-wrap">
+                <input type="text" id="usernameInput" placeholder="ENTER USERNAME" autocomplete="username"
+                    spellcheck="false" autocapitalize="none" />
+                <span class="ico">▶</span>
+            </div>
+            <div class="field-err" id="usernameErr">OPERATOR ID REQUIRED</div>
+        </div>
+
+        <!-- Password -->
+        <div class="lg-field">
+            <label for="passwordInput">ACCESS KEY</label>
+            <div class="lg-input-wrap">
+                <input type="password" id="passwordInput" placeholder="••••••••••••" autocomplete="current-password" />
+                <span class="ico">🔒</span>
+                <button class="toggle-pw" id="togglePw" type="button" tabindex="-1">SHOW</button>
+            </div>
+            <div class="field-err" id="passwordErr">ACCESS KEY REQUIRED</div>
+        </div>
+
+        <!-- Submit -->
+        <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+            <span class="btn-lbl">⚡ INITIATE ACCESS</span>
+            <div class="spinner"></div>
+        </button>
+
+        <div class="lg-divider">SECURE CHANNEL</div>
+
+        <div class="sys-bar">
+            <div class="sys-dot"></div>
+            <div class="sys-txt">
+                SERVER: <span>ONLINE</span> &nbsp;|&nbsp;
+                AUTH: <span>AES-256</span> &nbsp;|&nbsp;
+                SESSION: <span id="seshId">—</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════
+     SQUAD VERIFICATION PAGE
+     ═══════════════════════════════════════ -->
+    <div class="page" id="verifyPage">
+
+        <div class="hdr">
+            <div class="hdr-left">
+                <h1>SQUAD VERIFICATION</h1>
+                <p>SYSTEM ACCESS: GRANTED</p>
+            </div>
+            <div class="hdr-right">
+                <div class="op-pill">OP: <span id="opName">—</span></div>
+                <button class="back-btn" onclick="location.href='admin.html'">← RETURN</button>
+                <button class="logout-btn" onclick="handleLogout()">⏻ LOGOUT</button>
+            </div>
+        </div>
+
+        <div class="search-panel">
+            <div class="field">
+                <label>TARGET TEAM ID</label>
+                <div class="input-wrap">
+                    <input type="text" id="teamIdInput" placeholder="EX: BGMI-0001" autocomplete="off" />
+                </div>
+            </div>
+            <button class="scan-btn" onclick="scanTeam()">⚡ EXECUTE SCAN</button>
+        </div>
+
+        <div class="scanner" id="scanner">
+            <div class="scan-bar-wrap">
+                <div class="scan-bar" id="scanBar"></div>
+            </div>
+            <div id="scanMsg"
+                style="font-family:var(--font-d);font-size:0.65rem;letter-spacing:3px;color:var(--text-dim);">
+                SCANNING...</div>
+        </div>
+
+        <div id="resultArea">
+            <div class="not-found" id="notFound">TARGET NOT FOUND IN DATABASE</div>
+            <div class="result-card" id="resultCard">
+                <div class="rc-banner">
+                    <div class="rc-banner-left">
+                        <div class="team-avatar" id="avatarBox">—</div>
+                        <div>
+                            <h2 id="rc-teamname" style="font-family:var(--font-d);font-size:1rem;color:var(--text);">—
+                            </h2>
+                            <div id="rc-teamid"
+                                style="font-size:0.65rem;color:var(--text-dim);letter-spacing:2px;margin-top:3px;">—
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-badge" id="rc-badge">—</div>
+                </div>
+
+                <div class="rc-grid">
+                    <div class="rc-cell">
+                        <div class="lbl">GAME</div>
+                        <div class="val accent" id="rc-game">—</div>
+                    </div>
+                    <div class="rc-cell">
+                        <div class="lbl">DEPARTMENT</div>
+                        <div class="val" id="rc-dept">—</div>
+                    </div>
+                    <div class="rc-cell">
+                        <div class="lbl">CAPTAIN PHONE</div>
+                        <div class="val" id="rc-phone">—</div>
+                    </div>
+                    <div class="rc-cell">
+                        <div class="lbl">PAYMENT STATUS</div>
+                        <div class="val green" id="rc-payment">—</div>
+                    </div>
+                </div>
+
+                <div class="rc-players">
+                    <div class="players-list" id="rc-players"></div>
+                </div>
+
+                <div class="rc-actions">
+                    <button class="act-btn btn-verify" onclick="doAction('verified')">MARK VERIFIED</button>
+                    <button class="act-btn btn-reject" onclick="doAction('rejected')">REJECT</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════ -->
+    <script src="js/api.js"></script>
+    <script>
+
+        /* ─── Session ID (cosmetic) ─────────────────────── */
+        (function () {
+            const chars = 'ABCDEF0123456789';
+            let id = '';
+            for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+            document.getElementById('seshId').textContent = id;
+        })();
+
+        /* ─── View switcher ─────────────────────────────── */
+        function showView(id) {
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.remove('active');
+                p.style.animation = 'none';
+            });
+            const el = document.getElementById(id);
+            el.classList.add('active');
+            void el.offsetWidth; // reflow to restart animation
+            el.style.animation = '';
+        }
+
+        /* ─── Auth state ────────────────────────────────── */
+        // On load: if token exists, skip straight to verify page
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = sessionStorage.getItem('apex_user');
+            const token = sessionStorage.getItem('apex_token');
+            if (saved && token) {
+                document.getElementById('opName').textContent = saved.toUpperCase();
+                showView('verifyPage');
+                checkUrlTeamId();
+            } else {
+                showView('loginPage');
+            }
+        });
+
+        function checkUrlTeamId() {
+            const params = new URLSearchParams(window.location.search);
+            const tId = params.get('teamId');
+            if(tId) {
+                document.getElementById('teamIdInput').value = tId;
+                setTimeout(() => scanTeam(), 400); 
+            }
+        }
+
+        /* ─── Toast ─────────────────────────────────────── */
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = type === 'success' ? '#00ff88' : '#ff3c00';
+            t.style.color = '#000';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        /* ─── Password toggle ───────────────────────────── */
+        document.getElementById('togglePw').addEventListener('click', function () {
+            const inp = document.getElementById('passwordInput');
+            const hide = inp.type === 'password';
+            inp.type = hide ? 'text' : 'password';
+            this.textContent = hide ? 'HIDE' : 'SHOW';
+        });
+
+        /* ─── Enter key on login fields ─────────────────── */
+        ['usernameInput', 'passwordInput'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', e => {
+                if (e.key === 'Enter') handleLogin();
+            });
+        });
+
+        /* ─── Clear error on typing ─────────────────────── */
+        document.getElementById('usernameInput').addEventListener('input', () => clearErr('usernameInput', 'usernameErr'));
+        document.getElementById('passwordInput').addEventListener('input', () => clearErr('passwordInput', 'passwordErr'));
+
+        /* ─── Error helpers ─────────────────────────────── */
+        function showErr(inputId, errId, msg) {
+            document.getElementById(inputId).classList.add('err-inp');
+            const e = document.getElementById(errId);
+            if (msg) e.textContent = msg;
+            e.classList.add('vis');
+        }
+        function clearErr(inputId, errId) {
+            document.getElementById(inputId).classList.remove('err-inp');
+            document.getElementById(errId).classList.remove('vis');
+        }
+        function setLoading(state) {
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = state;
+            btn.classList.toggle('loading', state);
+        }
+
+        /* ─── LOGIN ─────────────────────────────────────── */
+        async function handleLogin() {
+            const username = document.getElementById('usernameInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            clearErr('usernameInput', 'usernameErr');
+            clearErr('passwordInput', 'passwordErr');
+
+            let valid = true;
+            if (!username) { showErr('usernameInput', 'usernameErr', 'OPERATOR ID REQUIRED'); valid = false; }
+            if (!password) { showErr('passwordInput', 'passwordErr', 'ACCESS KEY REQUIRED'); valid = false; }
+            if (!valid) return;
+
+            setLoading(true);
+
+            try {
+                // Uses /admin/verify-login which checks the verify_auth table in Supabase
+                const res = await fetch(`${API_BASE}/admin/verify-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.detail || data.message || 'INVALID CREDENTIALS');
+                }
+
+                const data = await res.json();
+                // Store JWT — backend returns access_token
+                if (data.access_token) sessionStorage.setItem('apex_token', data.access_token);
+
+                // Store operator name for the pill
+                sessionStorage.setItem('apex_user', username);
+                document.getElementById('opName').textContent = username.toUpperCase();
+
+                showToast('ACCESS GRANTED', 'success');
+                setLoading(false);
+
+                setTimeout(() => {
+                    showView('verifyPage');
+                    checkUrlTeamId();
+                }, 700);
+
+            } catch (err) {
+                setLoading(false);
+                const msg = (err.message || 'AUTH FAILURE').toUpperCase();
+                showErr('usernameInput', 'usernameErr', '');
+                showErr('passwordInput', 'passwordErr', msg);
+                showToast(msg, 'error');
+
+                // Shake card
+                const card = document.getElementById('loginPage');
+                card.style.animation = 'none';
+                void card.offsetWidth;
+                card.style.animation = 'shake 0.4s ease';
+            }
+        }
+
+        /* ─── LOGOUT ─────────────────────────────────────── */
+        function handleLogout() {
+            sessionStorage.removeItem('apex_token');
+            sessionStorage.removeItem('apex_user');
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            showToast('SESSION TERMINATED', 'error');
+            setTimeout(() => showView('loginPage'), 500);
+        }
+
+        /* ─── SQUAD VERIFICATION ─────────────────────────── */
+        let currentTeam = null;
+
+        async function scanTeam() {
+            const tid = document.getElementById('teamIdInput').value.trim().toUpperCase();
+            if (!tid) return showToast('ENTER TEAM ID', 'error');
+
+            const scanner = document.getElementById('scanner');
+            const bar = document.getElementById('scanBar');
+            scanner.style.display = 'block';
+            bar.style.width = '100%';
+
+            try {
+                const team = await apiFetch(`/admin/teams/${tid}`);
+                setTimeout(() => {
+                    scanner.style.display = 'none';
+                    renderResult(team);
+                }, 800);
+            } catch (err) {
+                scanner.style.display = 'none';
+                document.getElementById('resultCard').style.display = 'none';
+                document.getElementById('notFound').style.display = 'block';
+                document.getElementById('resultArea').style.display = 'block';
+            }
+        }
+
+        function renderResult(team) {
+            currentTeam = team;
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('notFound').style.display = 'none';
+            document.getElementById('resultCard').style.display = 'block';
+
+            document.getElementById('avatarBox').textContent = team.captain_name ? team.captain_name[0].toUpperCase() : '?';
+            document.getElementById('rc-teamname').innerText = team.captain_name + "'s Team";
+            document.getElementById('rc-teamid').innerText = team.team_id;
+            document.getElementById('rc-game').innerText = team.game;
+            document.getElementById('rc-dept').innerText = team.branch + ' — Sem ' + team.semester;
+            document.getElementById('rc-phone').innerText = team.captain_phone;
+            document.getElementById('rc-payment').innerText = team.payment_status.toUpperCase();
+
+            const pList = document.getElementById('rc-players');
+            pList.innerHTML = '';
+
+            // Captain
+            pList.innerHTML += `
+        <div class="player-chip">
+          <div class="player-num">C</div>
+          <div>
+            <div style="font-size:0.82rem">${team.captain_name}</div>
+            <div style="font-size:0.6rem;color:#555">${team.captain_usn || ''}</div>
+          </div>
+        </div>`;
+
+            // Players 2-4
+            [2, 3, 4].forEach(i => {
+                const name = team[`player${i}_name`];
+                const usn  = team[`player${i}_usn`];
+                if (name) {
+                    pList.innerHTML += `
+        <div class="player-chip">
+          <div class="player-num">${i}</div>
+          <div>
+            <div style="font-size:0.82rem">${name}</div>
+            <div style="font-size:0.6rem;color:#555">${usn || ''}</div>
+          </div>
+        </div>`;
+                }
+            });
+
+            const badge = document.getElementById('rc-badge');
+            badge.innerText = team.payment_status.toUpperCase();
+            badge.className = 'status-badge ' + (
+                team.payment_status === 'verified' ? 'badge-verified' :
+                    team.payment_status === 'paid' ? 'badge-paid' : 'badge-unpaid'
+            );
+        }
+
+        async function doAction(status) {
+            if (!currentTeam) return;
+            try {
+                await apiFetch(`/admin/teams/${currentTeam.team_id}/payment-status?payment_status=${status}`, { method: 'PUT' });
+                showToast('STATUS UPDATED', 'success');
+                scanTeam();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        /* Enter key for team search */
+        document.getElementById('teamIdInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') scanTeam();
+        });
+
+        /* Shake keyframe */
+        const s = document.createElement('style');
+        s.textContent = `@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}`;
+        document.head.appendChild(s);
+    </script>
+</body>
+
+</html>

@@ -15,6 +15,11 @@ from openpyxl.styles import (
 from openpyxl.utils import get_column_letter
 from database import admin_db
 from auth import get_current_admin
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.units import mm
 
 router = APIRouter(prefix="/export", tags=["Export"])
 
@@ -196,29 +201,114 @@ def _stream_workbook(wb: Workbook, filename: str) -> StreamingResponse:
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+def _build_pdf_table(teams: list[dict], title: str) -> bytes:
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=landscape(A4),
+        leftMargin=10 * mm,
+        rightMargin=10 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
+    )
 
-# ─── GET /export/bgmi ─────────────────────────────────────────────────────────
-@router.get("/bgmi", summary="Export BGMI registrations as Excel (protected)")
-async def export_bgmi(_: dict = Depends(get_current_admin)):
-    teams = _fetch_teams("BGMI")
-    wb    = _build_workbook(teams, "BGMI")
-    filename = f"BGMI_Teams_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    return _stream_workbook(wb, filename)
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Title
+    title_style = ParagraphStyle(
+        "pdf_title", parent=styles["Title"],
+        fontName="Helvetica-Bold", fontSize=16, spaceAfter=18, alignment=1 # Center
+    )
+    story.append(Paragraph(f"Apex Arena — {title.upper()} Teams SignIn Sheet", title_style))
+
+    # Table Header
+    table_data = [
+        ["Team ID", "Captain Name", "Branch & Sem", "Player 2", "Player 3", "Player 4", "Signature"]
+    ]
+
+    for t in teams:
+        # Combine branch and sem
+        branch = t.get("branch", "—")
+        sem = t.get("semester", "—")
+        branch_sem = f"{branch} - Sem {sem}"
+        
+        table_data.append([
+            t.get("team_id", "—"),
+            t.get("captain_name", "—"),
+            branch_sem,
+            t.get("player2_name", "—") or "—",
+            t.get("player3_name", "—") or "—",
+            t.get("player4_name", "—") or "—",
+            "" # Blank for signature
+        ])
+
+    # Adjusted column widths for landscape A4 (approx 277mm usable width)
+    col_widths = [18*mm, 38*mm, 35*mm, 38*mm, 38*mm, 38*mm, 60*mm]
+
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1A1A2E")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor("#FF6B35")),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('TOPPADDING', (0, 0), (-1, 0), 10),
+        
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor("#000000")),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+    ]))
+
+    # Alternating row colors (white/light grey for printing!)
+    for i in range(1, len(table_data)):
+        bg_color = colors.HexColor("#FFFFFF") if i % 2 == 0 else colors.HexColor("#F5F5F5")
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, i), (-1, i), bg_color),
+            ('TEXTCOLOR', (0, i), (-1, i), colors.black),
+        ]))
+
+    story.append(t)
+    doc.build(story)
+    return buf.getvalue()
 
 
-# ─── GET /export/freefire ─────────────────────────────────────────────────────
-@router.get("/freefire", summary="Export Free Fire registrations as Excel (protected)")
-async def export_freefire(_: dict = Depends(get_current_admin)):
-    teams = _fetch_teams("Free Fire")
-    wb    = _build_workbook(teams, "Free Fire")
-    filename = f"FreeFire_Teams_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    return _stream_workbook(wb, filename)
+# ─── GET /{format_type}/{game_path} ─────────────────────────────────────────
+@router.get("/{format_type}/{game_path}", summary="Export game registrations")
+async def export_game_data(format_type: str, game_path: str, _: dict = Depends(get_current_admin)):
+    game_map = {
+        "bgmi": "BGMI",
+        "freefire": "Free Fire",
+        "hackathon": "Hackathon",
+        "quiz": "Quiz"
+    }
+    
+    if game_path not in game_map:
+        raise HTTPException(404, detail="Game not found")
+        
+    actual_game = game_map[game_path]
+    teams = _fetch_teams(actual_game)
+    
+    filename_base = actual_game.replace(" ", "")
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+    
+    if format_type == "excel":
+        wb = _build_workbook(teams, actual_game)
+        filename = f"{filename_base}_Teams_{timestamp}.xlsx"
+        return _stream_workbook(wb, filename)
+    
+    elif format_type == "pdf":
+        pdf_data = _build_pdf_table(teams, actual_game)
+        filename = f"{filename_base}_Teams_{timestamp}.pdf"
+        return StreamingResponse(
+            io.BytesIO(pdf_data),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    else:
+        raise HTTPException(400, detail="Invalid format. Use 'excel' or 'pdf'")
 
-
-# ─── GET /export/all ──────────────────────────────────────────────────────────
-@router.get("/all", summary="Export ALL registrations as Excel (protected)")
-async def export_all(_: dict = Depends(get_current_admin)):
-    teams = _fetch_teams()
-    wb    = _build_workbook(teams, "All Games")
-    filename = f"All_Teams_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    return _stream_workbook(wb, filename)

@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS teams (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id         TEXT UNIQUE NOT NULL,     -- Human-readable ID e.g. BGMI-0001
-    game            TEXT NOT NULL CHECK (game IN ('BGMI', 'Free Fire')),
+    game            TEXT NOT NULL CHECK (game IN ('BGMI', 'Free Fire', 'Hackathon', 'Quiz')),
     email           TEXT NOT NULL,
     branch          TEXT NOT NULL CHECK (branch IN ('CSE', 'AI&DS', 'ECE')),
     semester        TEXT NOT NULL,

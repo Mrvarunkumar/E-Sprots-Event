@@ -21,7 +21,14 @@ def _generate_team_id(game: str) -> str:
     Query current count from DB and produce IDs like BGMI-0012, FF-0003.
     Uses the count of existing teams + 1 as the suffix.
     """
-    prefix = "BGMI" if game == "BGMI" else "FF"
+    if game == "BGMI":
+        prefix = "BGMI"
+    elif game == "Free Fire":
+        prefix = "FF"
+    elif game == "Hackathon":
+        prefix = "HCK"
+    else:
+        prefix = "QZ"
     try:
         result = (
             admin_db.table("teams")
@@ -133,13 +140,29 @@ async def get_event_counts():
             .eq("game", "BGMI")
             .execute()
         )
+        hackathon_res = (
+            db_client.table("teams")
+            .select("id", count="exact")
+            .eq("game", "Hackathon")
+            .execute()
+        )
+        quiz_res = (
+            db_client.table("teams")
+            .select("id", count="exact")
+            .eq("game", "Quiz")
+            .execute()
+        )
         ff_count   = ff_res.count   or 0
         bgmi_count = bgmi_res.count or 0
+        hackathon_count = hackathon_res.count or 0
+        quiz_count = quiz_res.count or 0
 
         return EventCountResponse(
             freefire_count=ff_count,
             bgmi_count=bgmi_count,
-            total=ff_count + bgmi_count,
+            hackathon_count=hackathon_count,
+            quiz_count=quiz_count,
+            total=ff_count + bgmi_count + hackathon_count + quiz_count,
         )
     except Exception as e:
         raise HTTPException(

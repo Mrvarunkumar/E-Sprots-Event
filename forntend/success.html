@@ -1,29 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Registration Successful</title>
-    <link rel="stylesheet" href="../forntend/css/sucess.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registration Success - Apex Arena</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+        /* Cyberpunk styling matching registration */
+        body { font-family: 'Orbitron', 'Rajdhani', sans-serif; background: radial-gradient(circle at center, #1a0000, #000000); min-height: 100vh; color: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; }
+        .success-box { background: rgba(0, 0, 0, 0.85); border: 1px solid rgba(0, 255, 136, 0.4); padding: 40px; border-radius: 16px; box-shadow: 0 0 30px rgba(0, 255, 136, 0.4); text-align: center; max-width: 500px; width: 90%; }
+        h1 { color: #00ff88; text-shadow: 0 0 15px #00ff88; margin-bottom: 20px; font-size: 2.2rem; letter-spacing: 2px; }
+        p { font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; margin-bottom: 25px; color: #ccc; }
+        .team-id { font-size: 2rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px #fff; background: rgba(255,255,255,0.1); padding: 15px 30px; border-radius: 8px; display: inline-block; margin-bottom: 30px; letter-spacing: 3px; border: 1px solid rgba(255,255,255,0.2); }
+        .btn { display: block; padding: 15px; font-family: 'Orbitron', sans-serif; font-size: 1rem; color: #000; background: linear-gradient(45deg, #00aa44, #00ff88); text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.3s; cursor: pointer; border: none; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 15px; }
+        .btn:hover { box-shadow: 0 0 20px #00ff88; transform: scale(1.03); }
+        .btn-home { background: linear-gradient(45deg, #ff3c00, #8b0000); color: #fff; margin-bottom: 0; }
+        .btn-home:hover { box-shadow: 0 0 20px #ff3c00; transform: scale(1.03); }
+    </style>
 </head>
 <body>
-
-<div class="bg"></div>
-
-<div class="success-box">
-    <div class="tick">✔</div>
-    <h1>Payment Successful</h1>
-    <p>Your Team Registration is Confirmed</p>
-
-    <div class="team-id-box">
-        <p>Your Team ID</p>
-        <h2 id="teamId">BGMI001</h2>
+    <div class="success-box">
+        <h1>REGISTRATION SUCCESSFUL</h1>
+        <p>Your team has been successfully registered for the event. Please note your official Team ID below.</p>
+        <div class="team-id" id="display-team-id">LOADING...</div>
+        <button class="btn" onclick="downloadReceipt()">DOWNLOAD RECEIPT (PDF)</button>
+        <a href="index.html" class="btn btn-home">RETURN TO HOME</a>
     </div>
 
-    <p class="email-msg">Confirmation email sent with acknowledgement PDF.</p>
+    <script>
+        // Get teamId from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamId = urlParams.get('teamId');
+        
+        if (teamId) {
+            document.getElementById('display-team-id').innerText = teamId;
+        } else {
+            document.getElementById('display-team-id').innerText = 'UNKNOWN';
+        }
 
-    <button onclick="downloadPDF()">Download Acknowledgement</button>
-    <button onclick="goHome()">Back to Home</button>
-</div>
-
-<script src="../forntend/js/sucess.js"></script>
+        // Trigger PDF download from backend API
+        function downloadReceipt() {
+            if (!teamId || teamId === 'UNKNOWN') {
+                alert("Team ID not found! Cannot download receipt.");
+                return;
+            }
+            window.location.href = `http://127.0.0.1:8000/download-pdf?teamId=${encodeURIComponent(teamId)}`;
+        }
+    </script>
 </body>
 </html>
